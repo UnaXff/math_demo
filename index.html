@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>指数增长与衰减模型 · 交互式仿真</title>
+<style>
+  :root{
+    --bg:#f5f7fa;
+    --panel:#ffffff;
+    --line:#e3e8ef;
+    --text:#1e293b;
+    --muted:#64748b;
+    --accent:#2563eb;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    display:flex;
+    height:100vh;
+    height:100dvh;
+    min-height:560px;
+  }
+
+  /* ============ 左侧控制面板 ============ */
+  .panel{
+    width:34%;
+    min-width:310px;
+    max-width:440px;
+    flex:0 0 auto;
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    padding:24px 22px 30px;
+    overflow-y:auto;
+  }
+  .panel h1{
+    font-size:19px;
+    font-weight:700;
+    margin:0 0 6px;
+    letter-spacing:.2px;
+  }
+  .formula{
+    margin:0 0 22px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:14px;
+    color:var(--muted);
+    letter-spacing:.5px;
+  }
+
+  .ctrl{ margin-bottom:20px; }
+  .ctrl-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:8px;
+    margin-bottom:7px;
+  }
+  .ctrl-name{
+    font-size:14px;
+    color:#334155;
+    font-weight:500;
+  }
+  .ctrl-name em{
+    font-style:normal;
+    font-size:12px;
+    color:var(--muted);
+    font-weight:400;
+  }
+  .ctrl-val{
+    flex:0 0 auto;
+    min-width:62px;
+    text-align:center;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:14.5px;
+    font-weight:700;
+    color:var(--accent);
+    background:#eff4ff;
+    border-radius:7px;
+    padding:2px 8px;
+  }
+  input[type=range]{
+    width:100%;
+    height:22px;
+    margin:0;
+    accent-color:var(--accent);
+    cursor:pointer;
+    display:block;
+  }
+
+  .readout{
+    margin-top:26px;
+    padding:16px 16px 14px;
+    border:1px solid #dbe6fb;
+    border-radius:14px;
+    background:linear-gradient(180deg,#f9fbff,#eef4ff);
+  }
+  .readout-label{
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:2px;
+  }
+  .readout-value{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:38px;
+    line-height:1.15;
+    font-weight:700;
+    color:var(--accent);
+    letter-spacing:-.5px;
+    word-break:break-all;
+    transition:font-size .12s ease;
+  }
+  .readout-sub{
+    margin-top:6px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:12px;
+    color:var(--muted);
+    word-break:break-all;
+    line-height:1.5;
+  }
+
+  /* ============ 右侧图表区 ============ */
+  .chart-area{
+    flex:1 1 auto;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    padding:18px 18px 18px 14px;
+  }
+  .chart-wrap{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .explain{
+    flex:0 0 auto;
+    margin-top:14px;
+    padding:14px 18px;
+    min-height:62px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    font-size:14.5px;
+    line-height:1.68;
+    color:#334155;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  .badge{
+    display:inline-block;
+    margin-right:10px;
+    padding:2px 11px;
+    border-radius:999px;
+    font-size:12.5px;
+    font-weight:700;
+    vertical-align:1px;
+    white-space:nowrap;
+  }
+  .badge.grow{ background:#dcfce7; color:#166534; }
+  .badge.decay{ background:#fee2e2; color:#b91c1c; }
+  .badge.const{ background:#e5e7eb; color:#374151; }
+
+  @media (max-width:880px){
+    .app{
+      flex-direction:column;
+      height:auto;
+      min-height:100dvh;
+    }
+    .panel{
+      width:100%;
+      max-width:none;
+      border-right:none;
+      border-bottom:1px solid var(--line);
+      padding:20px 18px 24px;
+    }
+    .chart-area{
+      padding:14px;
+      height:auto;
+    }
+    .chart-wrap{
+      flex:0 0 auto;
+      height:58vh;
+      min-height:320px;
+    }
+    .readout-value{ font-size:32px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <h1>指数增长与衰减模型</h1>
+    <p class="formula">y = A · e<sup>k·t</sup></p>
+
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <label class="ctrl-name" for="sA">初值 A <em>（t = 0 时的值）</em></label>
+        <span class="ctrl-val" id="vA">5.0</span>
+      </div>
+      <input type="range" id="sA" min="0.5" max="10" step="0.1" value="5">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <label class="ctrl-name" for="sK">增长率 k <em>（&gt;0 增长，&lt;0 衰减）</em></label>
+        <span class="ctrl-val" id="vK">0.20</span>
+      </div>
+      <input type="range" id="sK" min="-0.5" max="0.5" step="0.01" value="0.2">
+    </div>
+
+    <div class="ctrl">
+      <div class="ctrl-head">
+        <label class="ctrl-name" for="sT">时间 t</label>
+        <span class="ctrl-val" id="vT">5.0</span>
+      </div>
+      <input type="range" id="sT" min="0" max="20" step="0.1" value="5">
+    </div>
+
+    <div class="readout">
+      <div class="readout-label">当前函数值 y(t)</div>
+      <div class="readout-value" id="yValue">13.59</div>
+      <div class="readout-sub" id="yFormula">y(5.0) = 5.0 × e^(0.20 × 5.0)</div>
+    </div>
+  </aside>
+
+  <main class="chart-area">
+    <div class="chart-wrap">
+      <canvas id="chart" aria-label="指数函数曲线图"></canvas>
+    </div>
+    <div class="explain" id="explain"></div>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     基本设置
+     ========================================================= */
+  var T_MAX = 20;
+  var MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  var SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+  var cvs   = document.getElementById('chart');
+  var ctx   = cvs.getContext('2d');
+  var wrap  = document.querySelector('.chart-wrap');
+
+  var elA = document.getElementById('sA');
+  var elK = document.getElementById('sK');
+  var elT = document.getElementById('sT');
+  var vA  = document.getElementById('vA');
+  var vK  = document.getElementById('vK');
+  var vT  = document.getElementById('vT');
+  var yValEl = document.getElementById('yValue');
+  var yFormulaEl = document.getElementById('yFormula');
+  var explainEl = document.getElementById('explain');
+
+  // 当前状态
+  var S = { A: 5, k: 0.2, t: 5 };
+
+  /* =========================================================
+     数值格式化
+     ========================================================= */
+  function fmt(v) {
+    if (!isFinite(v)) return '—';
+    var a = Math.abs(v);
+    if (a === 0) return '0';
+    if (a >= 100000) return v.toExponential(1).replace('e+', 'e');
+    if (a >= 1000)   return v.toFixed(0);
+    if (a >= 100)    return v.toFixed(0);
+    if (a >= 10)     return v.toFixed(1);
+    if (a >= 0.01)   return v.toFixed(2);
+    return v.toExponential(1).replace('e+', 'e');
+  }
+
+  function fmt2(v) {
+    if (!isFinite(v)) return '—';
+    if (v >= 1e7) return v.toExponential(2).replace('e+', 'e');
+    return v.toFixed(2);
+  }
+
+  // 生成“好看”的刻度步长
+  function niceStep(range, count) {
+    if (!(range > 0)) return 1;
+    var raw = range / count;
+    var e = Math.floor(Math.log10(raw));
+    var p = Math.pow(10, e);
+    var f = raw / p;
+    var nf;
+    if (f <= 1)        nf = 1;
+    else if (f <= 2)   nf = 2;
+    else if (f <= 2.5) nf = 2.5;
+    else if (f <= 5)   nf = 5;
+    else               nf = 10;
+    return nf * p;
+  }
+
+  /* =========================================================
+     绘图
+     ========================================================= */
+  function draw() {
+    var W = cvs.clientWidth;
+    var H = cvs.clientHeight;
+    if (W < 40 || H < 40) return;
+
+    var dpr = window.devicePixelRatio || 1;
+    var pw = Math.round(W * dpr);
+    var ph = Math.round(H * dpr);
+    if (cvs.width !== pw || cvs.height !== ph) {
+      cvs.width = pw;
+      cvs.height = ph;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var padL = 74, padR = 34, padT = 32, padB = 50;
+    var plotW = W - padL - padR;
+    var plotH = H - padT - padB;
+    if (plotW < 60 || plotH < 60) return;
+
+    var A = S.A, k = S.k, t = S.t;
+
+    /* ---------- 纵轴范围（自动） ---------- */
+    var yEnd = A * Math.exp(k * T_MAX);
+    var rawTop = Math.max(A, yEnd) * 1.06;
+    if (!(rawTop > 0)) rawTop = 1;
+    var step = niceStep(rawTop, 5);
+    var yTop = Math.ceil(rawTop / step - 1e-9) * step;
+    if (!(yTop > 0)) yTop = step;
+
+    function X(tt) { return padL + (tt / T_MAX) * plotW; }
+    function Y(yy) { return padT + plotH - (yy / yTop) * plotH; }
+
+    /* ---------- 网格 ---------- */
+    ctx.lineWidth = 1;
+    ctx.font = '12px ' + MONO;
+
+    // 横轴网格 + 刻度
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (var tt = 0; tt <= T_MAX + 1e-9; tt += 2) {
+      var gx = X(tt);
+      ctx.strokeStyle = (tt === 0) ? '#cbd5e1' : '#eff2f7';
+      ctx.beginPath();
+      ctx.moveTo(gx, padT);
+      ctx.lineTo(gx, padT + plotH);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(String(tt), gx, padT + plotH + 10);
+    }
+
+    // 纵轴网格 + 刻度
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    var nTicks = Math.round(yTop / step);
+    for (var i = 0; i <= nTicks; i++) {
+      var val = i * step;
+      var gy = Y(val);
+      ctx.strokeStyle = (i === 0) ? '#cbd5e1' : '#eff2f7';
+      ctx.beginPath();
+      ctx.moveTo(padL, gy);
+      ctx.lineTo(padL + plotW, gy);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(fmt(val), padL - 12, gy);
+    }
+
+    // 纵轴
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT - 6);
+    ctx.lineTo(padL, padT + plotH);
+    ctx.lineTo(padL + plotW + 6, padT + plotH);
+    ctx.stroke();
+
+    // 轴标签
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 13px ' + MONO;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('t', padL + plotW + 10, padT + plotH + 22);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('y', padL - 12, padT - 8);
+
+    /* ---------- 初值 A 的水平虚线 ---------- */
+    var yA = Y(A);
+    if (yA >= padT - 1 && yA <= padT + plotH + 1) {
+      ctx.setLineDash([7, 5]);
+      ctx.strokeStyle = '#0d9488';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(padL, yA);
+      ctx.lineTo(padL + plotW, yA);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 在纵轴一侧标注 A
+      ctx.font = '600 12px ' + MONO;
+      ctx.fillStyle = '#0d9488';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('A = ' + fmt(A), padL + 8, yA - 6);
+    }
+
+    /* ---------- 倍增时间 / 半衰期 垂直虚线 ---------- */
+    var specialT = null;
+    var specialLabel = '';
+    if (Math.abs(k) >= 0.01) {
+      var ts = Math.LN2 / Math.abs(k);
+      if (ts <= T_MAX) {
+        specialT = ts;
+        specialLabel = (k > 0)
+          ? 't_d ≈ ' + ts.toFixed(2)
+          : 't½ ≈ ' + ts.toFixed(2);
+      }
+    }
+    if (specialT !== null) {
+      var sx = X(specialT);
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sx, padT);
+      ctx.lineTo(sx, padT + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = '600 12px ' + MONO;
+      ctx.fillStyle = '#b45309';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      var tw = ctx.measureText(specialLabel).width;
+      var lx = sx;
+      if (lx - tw / 2 < padL) lx = padL + tw / 2 + 2;
+      if (lx + tw / 2 > padL + plotW) lx = padL + plotW - tw / 2 - 2;
+      ctx.fillText(specialLabel, lx, padT - 8);
+    }
+
+    /* ---------- 曲线 ---------- */
+    ctx.beginPath();
+    var N = 720;
+    for (var j = 0; j <= N; j++) {
+      var tv = (j / N) * T_MAX;
+      var yv = A * Math.exp(k * tv);
+      var px = X(tv);
+      var py = Y(yv);
+      if (j === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.lineWidth = 2.8;
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    /* ---------- 当前点 ---------- */
+    var yNow = A * Math.exp(k * t);
+    var cx = X(t);
+    var cy = Y(yNow);
+
+    // 垂直引导线
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(220,38,38,0.35)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, padT + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 横轴上的定位小刻度
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(cx, padT + plotH);
+    ctx.lineTo(cx, padT + plotH + 7);
+    ctx.stroke();
+
+    // 圆点
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#dc2626';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    // 数值标签
+    var label = 'y(' + t.toFixed(1) + ') = ' + fmt2(yNow);
+    ctx.font = '600 13px ' + MONO;
+    var lw = ctx.measureText(label).width;
+    var tx = cx + 13;
+    if (tx + lw > padL + plotW) tx = cx - 13 - lw;
+    if (tx < padL + 2) tx = padL + 2;
+    var ty = cy - 13;
+    if (ty - 13 < padT) ty = cy + 24;
+    if (ty > padT + plotH) ty = padT + plotH - 6;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.fillRect(tx - 5, ty - 14, lw + 10, 19);
+    ctx.fillStyle = '#b91c1c';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(label, tx, ty);
+
+    /* ---------- 左上角信息 ---------- */
+    ctx.font = '600 12.5px ' + MONO;
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('y = ' + fmt(A) + ' · e^(' + k.toFixed(2) + ' t)', padL, 8);
+  }
+
+  /* =========================================================
+     教学解释文字
+     ========================================================= */
+  function updateExplain() {
+    var A = S.A, k = S.k, t = S.t;
+    var yNow = A * Math.exp(k * t);
+
+    var badge, cls, text;
+
+    if (Math.abs(k) < 0.01) {
+      cls = 'const';
+      badge = '近似常数';
+      if (k === 0) {
+        text = '当前 k = 0，增长率为 0，函数值保持不变：y(t) 恒等于初始值 A = '
+             + A.toFixed(2) + '，曲线为一条水平直线。';
+      } else {
+        text = '当前 |k| = ' + Math.abs(k).toFixed(2)
+             + ' 小于 0.01，近似常数，无显著倍增/半衰期；函数值基本保持在 A = '
+             + A.toFixed(2) + ' 附近。';
+      }
+    } else if (k > 0) {
+      var td = Math.LN2 / k;
+      cls = 'grow';
+      badge = '指数增长';
+      var s = '当前 k = ' + k.toFixed(2) + ' 大于 0，为指数增长；倍增时间 t_d = ln2 / k ≈ '
+            + td.toFixed(2) + '。';
+      if (t === 0) {
+        s += ' 当前 t = 0，函数值即为初始值 ' + A.toFixed(2) + '，之后每经过一个倍增时间将翻一番。';
+      } else if (td > T_MAX) {
+        s += ' 当前 t = ' + t.toFixed(1) + '，函数值从初始值 ' + A.toFixed(2)
+           + ' 增长到约 ' + fmt2(yNow) + '（倍增时间已超出绘图区间 0–20）。';
+      } else {
+        s += ' 当前 t = ' + t.toFixed(1) + '，约为倍增时间的 ' + (t / td).toFixed(2)
+           + ' 倍，函数值已从初始值 ' + A.toFixed(2) + ' 增长到约 ' + fmt2(yNow) + '。';
+      }
+      if (A * Math.exp(k * T_MAX) > 1000) {
+        s += ' 当前增长很快，注意纵轴刻度已自动调整。';
+      }
+      text = s;
+    } else {
+      var th = Math.LN2 / Math.abs(k);
+      cls = 'decay';
+      badge = '指数衰减';
+      var s2 = '当前 k = ' + k.toFixed(2) + ' 小于 0，为指数衰减；半衰期 t½ = ln2 / |k| ≈ '
+             + th.toFixed(2) + '。';
+      if (t === 0) {
+        s2 += ' 当前 t = 0，函数值即为初始值 ' + A.toFixed(2) + '，之后每经过一个半衰期将衰减一半。';
+      } else {
+        s2 += ' 当前 t = ' + t.toFixed(1) + '，约为半衰期的 ' + (t / th).toFixed(2)
+            + ' 倍，函数值已从初始值 ' + A.toFixed(2) + ' 衰减到约 ' + fmt2(yNow) + '。';
+      }
+      text = s2;
+    }
+
+    explainEl.innerHTML = '<span class="badge ' + cls + '">' + badge + '</span>' + text;
+  }
+
+  /* =========================================================
+     刷新
+     ========================================================= */
+  function refresh() {
+    S.A = parseFloat(elA.value);
+    S.k = parseFloat(elK.value);
+    S.t = parseFloat(elT.value);
+
+    vA.textContent = S.A.toFixed(1);
+    vK.textContent = S.k.toFixed(2);
+    vT.textContent = S.t.toFixed(1);
+
+    var yNow = S.A * Math.exp(S.k * S.t);
+
+    yValEl.textContent = fmt2(yNow);
+    yValEl.style.fontSize = (yNow >= 10000) ? '26px' : '38px';
+    if (window.innerWidth <= 880 && yNow >= 10000) {
+      yValEl.style.fontSize = '22px';
+    }
+
+    yFormulaEl.textContent = 'y(' + S.t.toFixed(1) + ') = ' + S.A.toFixed(1)
+      + ' × e^(' + S.k.toFixed(2) + ' × ' + S.t.toFixed(1) + ')';
+
+    updateExplain();
+    draw();
+  }
+
+  /* =========================================================
+     事件绑定
+     ========================================================= */
+  [elA, elK, elT].forEach(function (el) {
+    el.addEventListener('input', refresh);
+    el.addEventListener('change', refresh);
+  });
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { draw(); }).observe(wrap);
+  }
+  window.addEventListener('resize', draw);
+  window.addEventListener('orientationchange', function () {
+    setTimeout(draw, 120);
+  });
+
+  // 首次渲染
+  refresh();
+  // 字体加载完成后重绘一次，确保测量准确
+  setTimeout(draw, 60);
+  setTimeout(draw, 300);
+})();
+</script>
+</body>
+</html>
